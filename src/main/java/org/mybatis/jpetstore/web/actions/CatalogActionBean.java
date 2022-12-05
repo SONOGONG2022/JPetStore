@@ -17,6 +17,8 @@ package org.mybatis.jpetstore.web.actions;
 
 import java.util.List;
 
+import javax.servlet.http.HttpSession;
+
 import net.sourceforge.stripes.action.*;
 import net.sourceforge.stripes.integration.spring.SpringBean;
 
@@ -24,8 +26,6 @@ import org.mybatis.jpetstore.domain.Category;
 import org.mybatis.jpetstore.domain.Item;
 import org.mybatis.jpetstore.domain.Product;
 import org.mybatis.jpetstore.service.CatalogService;
-
-import javax.servlet.http.HttpSession;
 
 /**
  * The Class CatalogActionBean.
@@ -45,8 +45,8 @@ public class CatalogActionBean extends AbstractActionBean {
   private static final String VIEW_PRODUCT_LIST = "/WEB-INF/jsp/admin/AdminDashboard.jsp";
   private static final String VIEW_ADMIN_PRODUCT = "/WEB-INF/jsp/admin/AdminProduct.jsp";
   private static final String ADD_ITEM = "/WEB-INF/jsp/admin/AddItemForm.jsp";
-
   private static final String UPDATE_ITEM = "/WEB-INF/jsp/admin/UpdateItemForm.jsp";
+  private static final String ERROR = "/WEB-INF/jsp/common/Error.jsp";
 
   @SpringBean
   private transient CatalogService catalogService;
@@ -66,8 +66,6 @@ public class CatalogActionBean extends AbstractActionBean {
   private String itemId;
   private Item item;
   private List<Item> itemList;
-
-  private int role;
 
   public String getKeyword() {
     return keyword;
@@ -215,6 +213,10 @@ public class CatalogActionBean extends AbstractActionBean {
   }
 
   public ForwardResolution viewAdminProduct() {
+    if (!isAdminUser()) {
+      setMessage("You are not authorized to access this page.");
+      return new ForwardResolution(ERROR);
+    }
     if (productId != null) {
       itemList = catalogService.getItemListByProduct(productId);
       product = catalogService.getProduct(productId);
@@ -223,19 +225,20 @@ public class CatalogActionBean extends AbstractActionBean {
   }
 
   public ForwardResolution viewAllProduct() {
-    productList = catalogService.getProductList();
-    if(isAdminUser()==false){
-      return new ForwardResolution(VIEW_PRODUCT_LIST);
-    }
-    else{
-      String value = "접근 권한이 없습니다.";
-      setMessage(value);
+    if (!isAdminUser()) {
+      setMessage("You are not authorized to access this page.");
       return new ForwardResolution(ERROR);
     }
+    productList = catalogService.getProductList();
+    return new ForwardResolution(VIEW_PRODUCT_LIST);
   }
 
-  public ForwardResolution deleteItem(){
-    if(itemId != null) {
+  public ForwardResolution deleteItem() {
+    if (!isAdminUser()) {
+      setMessage("You are not authorized to access this page.");
+      return new ForwardResolution(ERROR);
+    }
+    if (itemId != null) {
       catalogService.deleteItem(itemId);
       itemId = null;
       item = new Item();
@@ -245,11 +248,19 @@ public class CatalogActionBean extends AbstractActionBean {
   }
 
   public ForwardResolution addItemForm() {
+    if (!isAdminUser()) {
+      setMessage("You are not authorized to access this page.");
+      return new ForwardResolution(ERROR);
+    }
     item = new Item();
     return new ForwardResolution(ADD_ITEM);
   }
 
   public Resolution addItem() {
+    if (!isAdminUser()) {
+      setMessage("You are not authorized to access this page.");
+      return new ForwardResolution(ERROR);
+    }
     item.setProductId(productId);
     catalogService.addItem(item);
     itemList = catalogService.getItemListByProduct(productId);
@@ -258,10 +269,18 @@ public class CatalogActionBean extends AbstractActionBean {
   }
 
   public ForwardResolution updateItemForm() {
+    if (!isAdminUser()) {
+      setMessage("You are not authorized to access this page.");
+      return new ForwardResolution(ERROR);
+    }
     return new ForwardResolution(UPDATE_ITEM);
   }
 
-  public Resolution updateItem(){
+  public Resolution updateItem() {
+    if (!isAdminUser()) {
+      setMessage("You are not authorized to access this page.");
+      return new ForwardResolution(ERROR);
+    }
     item.setItemId(itemId);
     catalogService.updateItem(item);
     itemList = catalogService.getItemListByProduct(productId);
@@ -269,21 +288,15 @@ public class CatalogActionBean extends AbstractActionBean {
     return new ForwardResolution(VIEW_ADMIN_PRODUCT);
   }
 
-
   public boolean isAdminUser() {
     HttpSession session = context.getRequest().getSession();
     AccountActionBean accountBean = (AccountActionBean) session.getAttribute("/actions/Account.action");
-    role= (accountBean.getAccount().getRole());
-
-    if(role == 0){
-      return true;
-    }
-
-    else{
+    if(accountBean == null || !accountBean.isAuthenticated()) {
       return false;
     }
+    int role = accountBean.getAccount().getRole();
+    return role == 1;
   }
-
 
   /**
    * Clear.
