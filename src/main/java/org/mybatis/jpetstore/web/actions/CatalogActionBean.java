@@ -224,7 +224,14 @@ public class CatalogActionBean extends AbstractActionBean {
 
   public ForwardResolution viewAllProduct() {
     productList = catalogService.getProductList();
-    return new ForwardResolution(VIEW_PRODUCT_LIST);
+    if(isAdminUser()==false){
+      return new ForwardResolution(VIEW_PRODUCT_LIST);
+    }
+    else{
+      String value = "접근 권한이 없습니다.";
+      setMessage(value);
+      return new ForwardResolution(ERROR);
+    }
   }
 
   public ForwardResolution deleteItem(){
@@ -250,18 +257,15 @@ public class CatalogActionBean extends AbstractActionBean {
     return new ForwardResolution(VIEW_ADMIN_PRODUCT);
   }
 
-  public ForwardResolution UpdateItemForm() {
-//    item = new Item();
+  public ForwardResolution updateItemForm() {
     return new ForwardResolution(UPDATE_ITEM);
   }
 
   public Resolution updateItem(){
-    item.setProductId(productId);
+    item.setItemId(itemId);
     catalogService.updateItem(item);
     itemList = catalogService.getItemListByProduct(productId);
     product = catalogService.getProduct(productId);
-
-
     return new ForwardResolution(VIEW_ADMIN_PRODUCT);
   }
 
@@ -271,7 +275,7 @@ public class CatalogActionBean extends AbstractActionBean {
     AccountActionBean accountBean = (AccountActionBean) session.getAttribute("/actions/Account.action");
     role= (accountBean.getAccount().getRole());
 
-    if(role == 1){
+    if(role == 0){
       return true;
     }
 
